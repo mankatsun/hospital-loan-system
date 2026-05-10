@@ -20,19 +20,33 @@ class GoogleSheetsManager:
         self.sheet = None
         self.worksheet = None
         
-    def connect(self):
+def connect(self):
         """連接到 Google Sheets"""
         try:
-            # 如果有服務帳戶檔案，使用它
-            creds = Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-            client = gspread.authorize(creds)
+            # 先嘗試從環境變數讀取 (適用於部署平台)
+            import os
+            credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+            if credentials_json:
+                from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+                import json
+                creds_info = json.loads(credentials_json)
+                creds = ServiceAccountCredentials.from_service_account_info(creds_info, scopes=SCOPES)
+                client = gspread.authorize(creds)
+            else:
+                # 如果有服務帳戶檔案，使用它
+                creds = Credentials.from_service_account_file(
+                    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                client = gspread.authorize(creds)
         except FileNotFoundError:
-            # 如果沒有服務帳戶檔案，使用本地認證
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-            client = gspread.authorize(creds)
+            # 如果兩種檔案都不存在，拋出錯誤
+            raise FileNotFoundError(
+                "找不到 Google Sheets 認證檔案。請確保：\n"
+                "1. 在本地環境中有 service_account.json 檔案，或\n"
+                "2. 在雲端環境中設定了 GOOGLE_APPLICATION_CREDENTIALS_JSON 環境變數"
+            )
+        except Exception as e:
+            # 其他錯誤
+            raise Exception(f"Google Sheets 連接失敗：{str(e)}")
         
         # 開啟或建立試算表
         try:
