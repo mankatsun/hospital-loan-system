@@ -21,6 +21,14 @@ if 'sheets_manager' not in st.session_state:
 if 'df' not in st.session_state:
     try:
         # 先建立連接
+        import os
+        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        if credentials_json:
+            st.write("🔑 環境變數已讀取")
+            st.write(f"📊 認證內容長度：{len(credentials_json)} 字符")
+        else:
+            st.write("❌ 環境變數未設定")
+        
         st.session_state.sheets_manager.connect()
         # 然後載入資料
         st.session_state.df = st.session_state.sheets_manager.load_data()
